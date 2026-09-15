@@ -91,6 +91,23 @@ router.post('/reviews',async(req,res) => {
 
 });
 
+router.delete('/reviews/:id', async(req,res) => {
+    const query = `DELETE FROM reviews WHERE id=$1`;
+    const id = req.params.id;
+    try {
+        const result = await client.query(query, [id]);
+        console.log(result);
+
+        if (result.rowCount == 1)
+            res.send({ message: "Review deleted with id=" + id });
+        else
+            res.send({ message: "No review found with id=" + id});
+        } catch (err) {
+            console.log("error", err.stack);
+        }
+
+});
+
 
 // eine GET-Anfrage
 router.get('/', async(req, res) => {
