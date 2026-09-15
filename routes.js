@@ -54,6 +54,43 @@ router.get('/reviews/:id', async(req,res) => {
         }
 });
 
+router.post('/reviews',async(req,res) => {
+    let user_id = (req.body.user_id) ? req.body.user_id : null;
+    let name = (req.body.name) ? req.body.name : null;
+    let category = (req.body.category) ? req.body.category : null;
+    let district = (req.body.district) ? req.body.district : null;
+    let rating = (req.body.rating) ? req.body.rating : null;
+    let comment = (req.body.comment) ? req.body.comment : null;
+    let recommended = (req.body.recommended) ? req.body.recommended : null;
+    let visit_date = (req.body.visit_date) ? req.body.visit_date : null;
+
+    const query = `
+    INSERT INTO reviews 
+    (user_id, name, category, district, rating, comment, recommended, visit_date)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    RETURNING *
+    `;
+    
+    try {
+        const result = await client.query(query, [
+            user_id,
+            name,
+            category,
+            district,
+            rating,
+            comment,
+            recommended,
+            visit_date
+        ]);
+
+        res.send(result.rows[0]);
+    } catch (err) {
+        console.log("error", err.stack);
+    }
+
+
+});
+
 
 // eine GET-Anfrage
 router.get('/', async(req, res) => {
