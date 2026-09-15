@@ -108,6 +108,52 @@ router.delete('/reviews/:id', async(req,res) => {
 
 });
 
+router.put('/reviews/:id', async(req, res) => {
+    const query = `SELECT * FROM reviews WHERE id=$1`;
+
+    let id = req.params.id;
+    const result = await client.query(query, [id]);
+
+    if(result.rowCount > 0)
+    {
+        let review = result.rows[0];
+
+    let name = (req.body.name) ? req.body.name : review.name;
+    let category = (req.body.category) ? req.body.category : review.category;
+    let district = (req.body.district) ? req.body.district : review.district;
+    let rating = (req.body.rating) ? req.body.rating : review.rating;
+    let comment = (req.body.comment) ? req.body.comment : review.comment;
+    let recommended = (req.body.recommended) ? req.body.recommended : review.recommended;
+    let visit_date = (req.body.visit_date) ? req.body.visit_date : review.visit_date;
+    
+
+    const updateQuery = `
+    UPDATE reviews 
+    SET name=$1, category=$2, district=$3, rating=$4,
+    comment=$5, recommended=$6, visit_date=$7
+    WHERE id=$8
+    RETURNING *
+    `
+
+    const updateResult = await client.query(updateQuery, [
+        name,
+        category,
+        district,
+        rating,
+        comment,
+        recommended,
+        visit_date,
+        id
+    ]);
+    res.send(updateResult.rows[0]);
+    }
+
+    else
+    {
+        res.send({ message: "No review found with id=" + id });
+    }
+})
+
 
 // eine GET-Anfrage
 router.get('/', async(req, res) => {
