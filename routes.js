@@ -1,6 +1,7 @@
 const client = require('./db');
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcrypt');
 
 router.get('/reviews', async(req, res) => {
     const query = `SELECT * FROM reviews`;
@@ -53,6 +54,27 @@ router.get('/reviews/:id', async(req,res) => {
             console.log("error", err.stack)
         }
 });
+
+router.post('/register', async(req, res) => {
+    const email = req.body.email;
+    const password = req.body.password;
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const query = `
+INSERT INTO users (email, password)
+VALUES ($1, $2)
+RETURNING *
+`;
+
+try {
+const result = await client.query(query, [email, hashedPassword]);
+res.send(result.rows[0]);
+} catch (err) {
+ console.log("error", err.stack);
+ }
+});
+
 
 router.post('/reviews',async(req,res) => {
     let user_id = (req.body.user_id) ? req.body.user_id : null;
@@ -158,14 +180,28 @@ router.post('/login', async(req, res) => {
     const email = req.body.email;
     const password = req.body.password;
 
-    const query = `SELECT * FROM users WHERE email=$1 AND password=$2`;
+    const query = `SELECT * FROM users WHERE email=$1`;
 
     try {
-        const result = await client.query(query, [email, password]);
-        if (result.rowCount == 1)
-            res.send(result.rows[0]);
-        else
+        const result = await client.query(query, [email]);
+        if (result.rowCount == 1) {
+            const user = result.rows[0];
+            const passwordCorrect = await bcrypt.compare(
+                password, 
+                user.password
+            );
+            
+            if (passwordCorrect) {
+                res.send(user);
+
+             } else{
             res.send({ message: "Login fehlgeschlagen" });
+             }
+    } else {
+        res.send({ message: "Login fehlgeschlagen"});
+    }
+  
+  
     } catch (err) {
         console.log("error", err.stack);
     }
