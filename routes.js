@@ -153,7 +153,23 @@ router.put('/reviews/:id', async(req, res) => {
         res.send({ message: "No review found with id=" + id });
     }
 })
+router.post('/login', async(req, res) => {
 
+    const email = req.body.email;
+    const password = req.body.password;
+
+    const query = `SELECT * FROM users WHERE email=$1 AND password=$2`;
+
+    try {
+        const result = await client.query(query, [email, password]);
+        if (result.rowCount == 1)
+            res.send(result.rows[0]);
+        else
+            res.send({ message: "Login fehlgeschlagen" });
+    } catch (err) {
+        console.log("error", err.stack);
+    }
+});
 
 // eine GET-Anfrage
 router.get('/', async(req, res) => {
