@@ -2,6 +2,19 @@ const client = require('./db');
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
+const multer = require('multer');
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/');
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
+});
+
+const upload = multer({ storage: storage });
+
 
 router.get('/reviews', async(req, res) => {
     const query = `SELECT * FROM reviews`;
@@ -76,7 +89,7 @@ res.send(result.rows[0]);
 });
 
 
-router.post('/reviews',async(req,res) => {
+router.post('/reviews', upload.single('image'), async(req,res) => {
     let user_id = (req.body.user_id) ? req.body.user_id : null;
     let name = (req.body.name) ? req.body.name : null;
     let category = (req.body.category) ? req.body.category : null;
@@ -85,11 +98,12 @@ router.post('/reviews',async(req,res) => {
     let comment = (req.body.comment) ? req.body.comment : null;
     let recommended = (req.body.recommended) ? req.body.recommended : null;
     let visit_date = (req.body.visit_date) ? req.body.visit_date : null;
+    let image = req.file ? req.file.filename : null;
 
     const query = `
     INSERT INTO reviews 
-    (user_id, name, category, district, rating, comment, recommended, visit_date)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    (user_id, name, category, district, rating, comment, recommended, visit_date, image)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     RETURNING *
     `;
     
@@ -102,7 +116,8 @@ router.post('/reviews',async(req,res) => {
             rating,
             comment,
             recommended,
-            visit_date
+            visit_date,
+            image
         ]);
 
         res.send(result.rows[0]);
@@ -212,5 +227,9 @@ router.get('/', async(req, res) => {
 
     res.send({ message: "Hello FIW!" });
 });
+
+
+
+
 
 module.exports = router;

@@ -10,6 +10,7 @@ const PORT = 3000;
 
 app.use(express.json());
 app.use(cors());
+app.use('/uploads', express.static('uploads'));
 app.use('/', routes);
 app.use('/init', initdb);
 

@@ -10,6 +10,7 @@ initdb.get('/', async(req, res) => {
     DROP TABLE IF EXISTS reviews;
     DROP TABLE IF EXISTS users;
 
+
     CREATE TABLE users(
         id SERIAL PRIMARY KEY,
         email VARCHAR(100) UNIQUE NOT NULL,
@@ -24,7 +25,8 @@ initdb.get('/', async(req, res) => {
         rating INTEGER,
         comment TEXT,
         recommended BOOLEAN,
-        visit_date DATE
+        visit_date DATE,
+        image VARCHAR(255)
     );
 `;
     try {
