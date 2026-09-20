@@ -2,6 +2,7 @@ const client = require('./db');
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const multer = require('multer');
 
 const storage = multer.diskStorage({
@@ -14,6 +15,23 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage: storage });
+
+function checkToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+
+    if (!authHeader) {
+        return res.status(401).send({ message: 'Kein Token vorhanden'});
+    }
+    const token = authHeader.split(' ')[1];
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch (err) {
+        return res.status(401).send({ message: 'Token ungültig' });
+    }
+}
 
 
 router.get('/reviews', async(req, res) => {
@@ -31,9 +49,11 @@ router.get('/reviews', async(req, res) => {
 
 
 
-router.get('/users/:id/reviews', async(req, res) => {
+router.get('/users/:id/reviews',checkToken, async(req, res) => {
 
-    const userId = req.params.id;
+    const userId = req.user.id;
+    console.log('GET Meine Reviews wurde aufgerufen');
+    console.log('User-ID aus Token:', userId);
 
     const query = `
 SELECT reviews.*
@@ -89,7 +109,7 @@ res.send(result.rows[0]);
 });
 
 
-router.post('/reviews', upload.single('image'), async(req,res) => {
+router.post('/reviews', checkToken, upload.single('image'), async(req,res) => {
     let user_id = (req.body.user_id) ? req.body.user_id : null;
     let name = (req.body.name) ? req.body.name : null;
     let category = (req.body.category) ? req.body.category : null;
@@ -128,7 +148,7 @@ router.post('/reviews', upload.single('image'), async(req,res) => {
 
 });
 
-router.delete('/reviews/:id', async(req,res) => {
+router.delete('/reviews/:id', checkToken,async(req,res) => {
     const query = `DELETE FROM reviews WHERE id=$1`;
     const id = req.params.id;
     try {
@@ -145,7 +165,7 @@ router.delete('/reviews/:id', async(req,res) => {
 
 });
 
-router.put('/reviews/:id', async(req, res) => {
+router.put('/reviews/:id', checkToken, async(req, res) => {
     const query = `SELECT * FROM reviews WHERE id=$1`;
 
     let id = req.params.id;
@@ -207,13 +227,27 @@ router.post('/login', async(req, res) => {
             );
             
             if (passwordCorrect) {
-                res.send(user);
+                const token = jwt.sign( 
+                    { id: user.id, email: user.email },
+                    process.env.JWT_SECRET
+                );
+
+                res.send({
+                    token: token,
+                    user: {
+                        id: user.id,
+                        email: user.email
+                    }
+                });
+                
 
              } else{
-            res.send({ message: "Login fehlgeschlagen" });
+                res.status(401);
+                res.send({ message: "Login fehlgeschlagen. E-Mail oder Passwort falsch." });
              }
     } else {
-        res.send({ message: "Login fehlgeschlagen"});
+        res.status(401);
+        res.send({ message: "Login fehlgeschlagen. E-Mail oder Passwort falsch."});
     }
   
   
