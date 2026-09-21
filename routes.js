@@ -52,9 +52,7 @@ router.get('/reviews', async(req, res) => {
 router.get('/users/:id/reviews',checkToken, async(req, res) => {
 
     const userId = req.user.id;
-    console.log('GET Meine Reviews wurde aufgerufen');
-    console.log('User-ID aus Token:', userId);
-
+    
     const query = `
 SELECT reviews.*
 FROM reviews
@@ -92,6 +90,13 @@ router.post('/register', async(req, res) => {
     const email = req.body.email;
     const password = req.body.password;
 
+    const checkQuery = `SELECT * FROM users WHERE email = $1`;
+    const checkResult = await client.query(checkQuery, [email]);
+
+    if(checkResult.rowCount > 0) {
+        return res.status(400).send({ message: "E-Mail bereits registriert" });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const query = `
@@ -110,7 +115,8 @@ res.send(result.rows[0]);
 
 
 router.post('/reviews', checkToken, upload.single('image'), async(req,res) => {
-    let user_id = (req.body.user_id) ? req.body.user_id : null;
+
+    let user_id = req.user.id;
     let name = (req.body.name) ? req.body.name : null;
     let category = (req.body.category) ? req.body.category : null;
     let district = (req.body.district) ? req.body.district : null;
@@ -165,7 +171,7 @@ router.delete('/reviews/:id', checkToken,async(req,res) => {
 
 });
 
-router.put('/reviews/:id', checkToken, async(req, res) => {
+router.put('/reviews/:id', checkToken, upload.single('image'), async(req, res) => {
     const query = `SELECT * FROM reviews WHERE id=$1`;
 
     let id = req.params.id;
@@ -182,13 +188,14 @@ router.put('/reviews/:id', checkToken, async(req, res) => {
     let comment = (req.body.comment) ? req.body.comment : review.comment;
     let recommended = (req.body.recommended) ? req.body.recommended : review.recommended;
     let visit_date = (req.body.visit_date) ? req.body.visit_date : review.visit_date;
+    let image = req.file ? req.file.filename: review.image;
     
 
     const updateQuery = `
     UPDATE reviews 
     SET name=$1, category=$2, district=$3, rating=$4,
-    comment=$5, recommended=$6, visit_date=$7
-    WHERE id=$8
+    comment=$5, recommended=$6, visit_date=$7, image=$8
+    WHERE id=$9
     RETURNING *
     `
 
@@ -200,6 +207,7 @@ router.put('/reviews/:id', checkToken, async(req, res) => {
         comment,
         recommended,
         visit_date,
+        image,
         id
     ]);
     res.send(updateResult.rows[0]);
